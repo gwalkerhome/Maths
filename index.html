@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Primaria</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f9ff; }
+        #canvas { border: 2px dashed #007bff; background: white; cursor: crosshair; touch-action: none; }
+        .numpad { display: grid; grid-template-columns: repeat(5, 60px); gap: 10px; margin-top: 20px; }
+        button { padding: 15px; font-size: 20px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+        .submit-btn { background-color: #28a745; color: white; width: 200px; margin-top: 20px; font-weight: bold; }
+        .display { font-size: 30px; margin: 20px; padding: 10px; border-bottom: 3px solid #007bff; min-width: 100px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>¿Cuánto es 5 + 3?</h1>
+    <canvas id="canvas" width="400" height="200"></canvas>
+    
+    <div class="display" id="result">?</div>
+
+    <div class="numpad">
+        <button onclick="addNum(1)">1</button><button onclick="addNum(2)">2</button><button onclick="addNum(3)">3</button><button onclick="addNum(4)">4</button><button onclick="addNum(5)">5</button>
+        <button onclick="addNum(6)">6</button><button onclick="addNum(7)">7</button><button onclick="addNum(8)">8</button><button onclick="addNum(9)">9</button><button onclick="addNum(0)">0</button>
+    </div>
+
+    <button class="submit-btn" onclick="check()">¡Comprobar!</button>
+
+    <script>
+        // Simple Drawing Logic
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        canvas.onmousedown = () => drawing = true;
+        canvas.onmouseup = () => { drawing = false; ctx.beginPath(); };
+        canvas.onmousemove = (e) => {
+            if (!drawing) return;
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            ctx.stroke();
+        };
+
+        // Number Pad Logic
+        let currentInput = "";
+        function addNum(n) {
+            currentInput += n;
+            document.getElementById('result').innerText = currentInput;
+        }
+
+        function check() {
+            if(currentInput === "8") alert("¡Muy bien! 🎉");
+            else alert("Sigue intentando...");
+        }
+    </script>
+</body>
+</html>
