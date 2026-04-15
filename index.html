@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Classroom AI (OpenAI)</title>
+    <title>Math Classroom AI</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -49,16 +49,16 @@
                             "Authorization": `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            model: "gpt-4o-mini", // GPT-4o-mini is efficient for document reading
+                            model: "gpt-4o", 
                             messages: [
                                 {
                                     role: "user",
                                     content: [
-                                        { type: "text", text: "Extract every math problem from this PDF. Return ONLY a JSON array. Format: [{\"id\": 1, \"question\": \"Problem text\", \"type\": \"numeric\", \"answer\": \"8\"}]. No extra text or markdown." },
+                                        { type: "text", text: "Extract math problems from this PDF. Return ONLY a JSON object with a key named 'problems' containing an array of objects. Each object needs: id, question, type ('numeric' or 'canvas'), and answer." },
                                         {
-                                            type: "image_url",
-                                            image_url: {
-                                                url: `data:application/pdf;base64,${base64Data}`
+                                            type: "input_file",
+                                            input_file: {
+                                                file_data: `data:application/pdf;base64,${base64Data}`
                                             }
                                         }
                                     ]
@@ -75,10 +75,7 @@
 
                     const data = await response.json();
                     const content = JSON.parse(data.choices[0].message.content);
-                    
-                    // Handle case where AI wraps the array in a "problems" object
-                    const problemList = Array.isArray(content) ? content : (content.problems || Object.values(content)[0]);
-                    setProblems(problemList);
+                    setProblems(content.problems || content);
                 } catch (error) {
                     console.error(error);
                     alert("Error: " + error.message);
@@ -91,14 +88,14 @@
                 return (
                     <div className="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow-xl border-t-8 border-indigo-600">
                         <h1 className="text-3xl font-bold text-center text-slate-800 mb-2">Math Classroom</h1>
-                        <p className="text-center text-slate-500 mb-8 font-medium text-sm">Now powered by OpenAI</p>
+                        <p className="text-center text-slate-500 mb-8 font-medium text-sm">Upload PDF (OpenAI Mode)</p>
                         
                         <div className="space-y-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">1. Your OpenAI API Key</label>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">1. Your OpenAI API Key</label>
                                 <input 
                                     type="password" 
-                                    className="w-full p-4 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                                    className="w-full p-4 bg-slate-50 border rounded-xl outline-none" 
                                     placeholder="sk-..."
                                     value={apiKey}
                                     onChange={(e) => setApiKey(e.target.value)}
@@ -106,12 +103,11 @@
                             </div>
                             
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">2. Upload Lesson (PDF)</label>
-                                <div className="relative border-2 border-dashed border-slate-200 p-8 text-center rounded-2xl hover:bg-slate-50 transition-colors">
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">2. Upload Lesson (PDF)</label>
+                                <div className="border-2 border-dashed border-slate-200 p-8 text-center rounded-2xl">
                                     <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} className="hidden" id="pdf-input" />
                                     <label htmlFor="pdf-input" className="cursor-pointer block">
-                                        <span className="text-4xl mb-2 block">📄</span>
-                                        <span className="text-indigo-600 font-bold block">{file ? file.name : "Tap to select PDF"}</span>
+                                        <span className="text-blue-600 font-bold block">{file ? file.name : "Tap to select PDF"}</span>
                                     </label>
                                 </div>
                             </div>
@@ -121,13 +117,13 @@
                                 disabled={loading}
                                 className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 disabled:bg-slate-300"
                             >
-                                {loading ? "Analyzing PDF..." : "CREATE LESSON"}
+                                {loading ? "AI is Reading PDF..." : "CREATE LESSON"}
                             </button>
 
                             {problems && (
                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-6 border-t border-slate-100">
-                                    <button onClick={() => setView('primary')} className="p-5 bg-orange-500 text-white rounded-2xl font-black shadow-lg uppercase tracking-tighter">Kids (4-11)</button>
-                                    <button onClick={() => setView('secondary')} className="p-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg uppercase tracking-tighter">ESO (11+)</button>
+                                    <button onClick={() => setView('primary')} className="p-5 bg-orange-500 text-white rounded-2xl font-black shadow-lg">KIDS (4-11)</button>
+                                    <button onClick={() => setView('secondary')} className="p-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">ESO (11+)</button>
                                 </div>
                             )}
                         </div>
@@ -138,15 +134,14 @@
             return (
                 <div className="max-w-3xl mx-auto p-4 pb-20">
                     <button onClick={() => setView('home')} className="mb-8 font-bold text-indigo-600 flex items-center">
-                        <span className="text-2xl mr-2">←</span> Back to Upload
+                        <span className="text-2xl mr-2">←</span> Back
                     </button>
                     <div className="space-y-6">
-                        {problems.map(p => (
-                            <div key={p.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">Question {p.id}</h3>
+                        {problems.map((p, index) => (
+                            <div key={index} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
                                 <p className="text-xl font-bold text-slate-800 mb-6">{p.question}</p>
                                 <div className="h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center">
-                                    <p className="text-slate-400 font-medium italic text-center px-4">Workspace for {p.type} answer</p>
+                                    <p className="text-slate-400 font-medium italic">Workspace for {p.type}</p>
                                 </div>
                             </div>
                         ))}
