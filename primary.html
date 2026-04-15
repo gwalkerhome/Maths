@@ -3,84 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Primaria - Sumas con Llevadas</title>
+    <title>Primaria - Columnas Reales</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .math-grid {
+        .math-column {
             display: grid;
-            grid-template-columns: repeat(3, 3rem);
-            gap: 0.5rem;
-            font-family: 'monospace';
-            font-size: 3.5rem;
-            text-align: center;
-            line-height: 1;
+            grid-template-columns: repeat(3, 4rem);
+            gap: 1rem;
+            justify-items: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
         }
-        .carry-box {
+        .digit { font-size: 3.5rem; font-weight: 800; color: #1e293b; }
+        .input-box {
+            width: 3.5rem;
+            height: 4.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: white;
+            border: 3px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .input-active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 4px #dbeafe; }
+        .carry-input {
             width: 2.5rem;
             height: 2.5rem;
             border: 2px dashed #cbd5e1;
             border-radius: 0.5rem;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #64748b;
-            background: white;
         }
     </style>
 </head>
-<body class="bg-orange-50 select-none">
+<body class="bg-orange-50 select-none overflow-hidden">
     <div id="root"></div>
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
         function PrimaryApp() {
             const problems = JSON.parse(localStorage.getItem('current_problems') || "[]");
             const [index, setIndex] = useState(0);
-            const [answer, setAnswer] = useState('');
-            const [carries, setCarries] = useState({ h: '', t: '' }); // h=hundreds, t=tens
             const [status, setStatus] = useState(null);
-            const [activeBox, setActiveBox] = useState('answer'); // 'answer', 'carryT', 'carryH'
+            
+            // answer is now an array: [hundreds, tens, units]
+            const [digits, setDigits] = useState(['', '', '']);
+            const [carries, setCarries] = useState(['', '']); // [H-carry, T-carry]
+            const [focus, setFocus] = useState({ type: 'ans', pos: 2 }); // Start at Units (pos 2)
 
-            if (problems.length === 0) return <div className="p-10 text-center text-xl">No hay problemas. <a href="index.html" className="text-blue-500">Volver</a></div>;
+            if (problems.length === 0) return <div className="p-10 text-center">No hay datos.</div>;
             
             const current = problems[index];
-            const top = current.top.padStart(3, '0').split('');
-            const bottom = current.bottom.padStart(3, '0').split('');
+            const top = current.top.padStart(3, ' ').split('');
+            const bottom = current.bottom.padStart(3, ' ').split('');
 
             const handlePress = (val) => {
                 if (status === 'win') return;
-                
+
                 if (val === 'C') {
-                    if (activeBox === 'answer') setAnswer('');
-                    if (activeBox === 'carryT') setCarries(prev => ({ ...prev, t: '' }));
-                    if (activeBox === 'carryH') setCarries(prev => ({ ...prev, h: '' }));
+                    if (focus.type === 'ans') {
+                        let newDigits = [...digits];
+                        newDigits[focus.pos] = '';
+                        setDigits(newDigits);
+                    } else {
+                        let newCarries = [...carries];
+                        newCarries[focus.pos] = '';
+                        setCarries(newCarries);
+                    }
                     return;
                 }
 
-                if (activeBox === 'answer') setAnswer(prev => prev + val);
-                if (activeBox === 'carryT') setCarries(prev => ({ ...prev, t: val }));
-                if (activeBox === 'carryH') setCarries(prev => ({ ...prev, h: val }));
+                if (focus.type === 'ans') {
+                    let newDigits = [...digits];
+                    newDigits[focus.pos] = val;
+                    setDigits(newDigits);
+                    // AUTO-MOVE LEFT: If we just filled Units (2), move to Tens (1)
+                    if (focus.pos > 0) setFocus({ type: 'ans', pos: focus.pos - 1 });
+                } else {
+                    let newCarries = [...carries];
+                    newCarries[focus.pos] = val;
+                    setCarries(newCarries);
+                }
             };
 
             const check = () => {
-                if (answer === current.answer.toString()) {
+                const submitted = digits.join('').trim();
+                if (parseInt(submitted) === parseInt(current.answer)) {
                     setStatus('win');
                     setTimeout(() => {
                         if (index < problems.length - 1) {
                             setIndex(index + 1);
-                            setAnswer('');
-                            setCarries({ h: '', t: '' });
+                            setDigits(['', '', '']);
+                            setCarries(['', '']);
+                            setFocus({ type: 'ans', pos: 2 });
                             setStatus(null);
-                            setActiveBox('answer');
                         } else {
-                            alert("¡Felicidades! Has terminado.");
+                            alert("¡Excelente trabajo!");
                             window.location.href = 'index.html';
                         }
-                    }, 1000);
+                    }, 1200);
                 } else {
                     setStatus('fail');
                     setTimeout(() => setStatus(null), 800);
@@ -88,67 +117,58 @@
             };
 
             return (
-                <div className="h-screen flex flex-col items-center justify-between p-4 overflow-hidden">
-                    {/* Header */}
-                    <div className="w-full flex justify-between items-center text-orange-800 font-bold p-2">
-                        <button onClick={() => window.location.href = 'index.html'}>✕ Salir</button>
-                        <span>Suma {index + 1} / {problems.length}</span>
+                <div className="h-screen flex flex-col items-center justify-between p-4">
+                    <div className="w-full flex justify-between p-2 font-bold text-orange-800">
+                        <button onClick={() => window.location.href='index.html'}>✕</button>
+                        <span>Suma {index + 1}/{problems.length}</span>
                     </div>
 
-                    {/* Math Area */}
-                    <div className="flex flex-col items-end relative">
-                        {/* Carry Boxes Row */}
-                        <div className="flex gap-2 mb-2 pr-2">
-                            <div 
-                                onClick={() => setActiveBox('carryH')}
-                                className={`carry-box ${activeBox === 'carryH' ? 'border-orange-500 bg-orange-100' : ''}`}
-                            >
-                                {carries.h}
-                            </div>
-                            <div 
-                                onClick={() => setActiveBox('carryT')}
-                                className={`carry-box ${activeBox === 'carryT' ? 'border-orange-500 bg-orange-100' : ''}`}
-                            >
-                                {carries.t}
-                            </div>
-                            <div className="w-10"></div> {/* Space over units */}
+                    <div className="flex flex-col items-center">
+                        {/* Carries Row */}
+                        <div className="math-column mb-2">
+                            <div onClick={()=>setFocus({type:'cry', pos:0})} className={`carry-input ${focus.type==='cry'&&focus.pos===0?'bg-blue-100 border-blue-400':''}`}>{carries[0]}</div>
+                            <div onClick={()=>setFocus({type:'cry', pos:1})} className={`carry-input ${focus.type==='cry'&&focus.pos===1?'bg-blue-100 border-blue-400':''}`}>{carries[1]}</div>
+                            <div></div>
                         </div>
 
-                        {/* Numbers */}
-                        <div className="math-grid font-bold text-slate-800">
-                            <span>{top[0]}</span><span>{top[1]}</span><span>{top[2]}</span>
-                            <span className="text-orange-500">+</span><span>{bottom[1]}</span><span>{bottom[2]}</span>
+                        {/* Problem Numbers */}
+                        <div className="math-column digit">
+                            {top.map((n, i) => <span key={'t'+i}>{n}</span>)}
+                            <span className="text-orange-500 font-normal">+</span>
+                            <span>{bottom[1]}</span><span>{bottom[2]}</span>
                         </div>
 
-                        {/* Line */}
-                        <div className="w-full h-1.5 bg-slate-800 my-4 rounded-full"></div>
+                        {/* Divider */}
+                        <div className="w-64 h-1 bg-slate-800 my-4 rounded-full"></div>
 
-                        {/* Answer Area */}
-                        <div 
-                            onClick={() => setActiveBox('answer')}
-                            className={`text-5xl font-mono font-bold h-20 flex items-center tracking-widest ${activeBox === 'answer' ? 'text-blue-600 border-b-4 border-blue-200' : 'text-slate-400'} ${status === 'win' ? 'text-green-500' : ''}`}
-                        >
-                            {answer || '?'}
+                        {/* Structured Answer Row */}
+                        <div className="math-column">
+                            {[0, 1, 2].map(i => (
+                                <div 
+                                    key={'ans'+i}
+                                    onClick={() => setFocus({type:'ans', pos: i})}
+                                    className={`input-box ${focus.type==='ans' && focus.pos === i ? 'input-active' : ''} ${status==='win' ? 'text-green-500' : 'text-blue-600'}`}
+                                >
+                                    {digits[i]}
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Feedback */}
-                    <div className="h-8">
-                        {status === 'win' && <div className="text-2xl font-black text-green-500 animate-bounce">¡MUY BIEN! 🌟</div>}
-                        {status === 'fail' && <div className="text-2xl font-black text-red-500">Inténtalo de nuevo</div>}
+                    <div className="h-10">
+                        {status === 'win' && <div className="text-2xl font-black text-green-500">🌟 ¡CONSEGUIDO!</div>}
+                        {status === 'fail' && <div className="text-2xl font-black text-red-500">Revisa los números...</div>}
                     </div>
 
-                    {/* Number Pad */}
-                    <div className="grid grid-cols-3 gap-3 w-full max-w-sm pb-6">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "OK"].map(btn => (
+                    {/* Keypad */}
+                    <div className="grid grid-cols-3 gap-2 w-full max-w-sm pb-8">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "OK"].map(b => (
                             <button
-                                key={btn}
-                                onClick={() => btn === "OK" ? check() : handlePress(btn)}
-                                className={`h-16 rounded-2xl shadow-lg font-black text-2xl active:scale-95 transition-all ${
-                                    btn === "OK" ? "bg-orange-600 text-white" : "bg-white text-slate-700"
-                                } ${btn === "C" ? "text-red-500" : ""}`}
+                                key={b}
+                                onClick={() => b === "OK" ? check() : handlePress(b)}
+                                className={`h-16 rounded-2xl font-black text-2xl shadow-md active:scale-90 transition-all ${b === "OK" ? "bg-blue-600 text-white" : "bg-white text-slate-700"}`}
                             >
-                                {btn}
+                                {b}
                             </button>
                         ))}
                     </div>
