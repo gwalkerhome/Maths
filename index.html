@@ -27,7 +27,6 @@
             const [problems, setProblems] = useState(null);
             const [view, setView] = useState('home');
 
-            // Save key automatically when it changes
             useEffect(() => {
                 if (apiKey) localStorage.setItem('gemini_api_key', apiKey);
             }, [apiKey]);
@@ -43,15 +42,19 @@
 
             const processPDF = async () => {
                 if (!file || !apiKey) return alert("Please provide both an API key and a PDF.");
-                if (!window.GoogleGenerativeAI) return alert("AI Library still loading... wait 2 seconds.");
+                if (!window.GoogleGenerativeAI) return alert("Still loading AI... please wait a moment.");
                 
                 setLoading(true);
                 try {
                     const genAI = new window.GoogleGenerativeAI(apiKey);
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    
+                    // Using the stable V1 endpoint and explicitly naming the model
+                    const model = genAI.getGenerativeModel({ 
+                        model: "gemini-1.5-flash",
+                    }, { apiVersion: "v1" });
 
                     const base64Data = await convertToBase64(file);
-                    const prompt = "Act as a math teacher. Extract all problems from this PDF. Return a JSON array only. Format: [{\"id\": 1, \"question\": \"Problem text\", \"type\": \"numeric\", \"answer\": \"8\"}]. Use 'numeric' for simple answers and 'canvas' for geometry/drawing.";
+                    const prompt = "Extract all math problems from this PDF. Return a valid JSON array ONLY. Format: [{\"id\": 1, \"question\": \"Problem text\", \"type\": \"numeric\", \"answer\": \"8\"}]. No markdown or backticks.";
 
                     const result = await model.generateContent([
                         prompt,
@@ -59,7 +62,7 @@
                     ]);
 
                     const response = await result.response;
-                    const text = response.text().replace(/```json|```/g, "").trim();
+                    let text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
                     setProblems(JSON.parse(text));
                 } catch (error) {
                     console.error("Error:", error);
@@ -96,13 +99,13 @@
                             <button 
                                 onClick={processPDF}
                                 disabled={loading}
-                                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:bg-gray-400"
+                                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 disabled:bg-gray-400"
                             >
                                 {loading ? "AI is thinking..." : "Generate Interactive Lesson"}
                             </button>
 
                             {problems && (
-                                <div className="grid grid-cols-2 gap-4 mt-6 animate-bounce">
+                                <div className="grid grid-cols-2 gap-4 mt-6">
                                     <button onClick={() => setView('primary')} className="p-4 bg-orange-500 text-white rounded-xl font-bold shadow-md">Ages 4-11</button>
                                     <button onClick={() => setView('secondary')} className="p-4 bg-indigo-600 text-white rounded-xl font-bold shadow-md">Ages 11+</button>
                                 </div>
@@ -120,8 +123,8 @@
                         {problems.map(p => (
                             <div key={p.id} className="bg-white p-5 rounded-xl shadow border-l-8 border-blue-500">
                                 <p className="text-lg font-medium text-gray-800">{p.question}</p>
-                                <div className="mt-4 h-32 border-2 border-dotted border-gray-200 rounded-lg flex items-center justify-center text-gray-400">
-                                    Interaction Area ({p.type})
+                                <div className="mt-4 h-32 border-2 border-dotted border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                                    Digital workspace for {p.type} questions
                                 </div>
                             </div>
                         ))}
