@@ -49,16 +49,17 @@
                             "Authorization": `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            model: "gpt-4o", 
+                            model: "gpt-4o-mini", 
                             messages: [
                                 {
                                     role: "user",
                                     content: [
-                                        { type: "text", text: "Extract math problems from this PDF. Return ONLY a JSON object with a key named 'problems' containing an array of objects. Each object needs: id, question, type ('numeric' or 'canvas'), and answer." },
+                                        { type: "text", text: "Extract math problems from this PDF. Return ONLY a JSON object with a key named 'problems' containing an array. Each object needs: id, question, type, and answer." },
                                         {
-                                            type: "input_file",
-                                            input_file: {
-                                                file_data: `data:application/pdf;base64,${base64Data}`
+                                            type: "file",
+                                            file: {
+                                                data: base64Data,
+                                                mime_type: "application/pdf"
                                             }
                                         }
                                     ]
@@ -70,12 +71,13 @@
 
                     if (!response.ok) {
                         const error = await response.json();
-                        throw new Error(error.error?.message || "Connection failed");
+                        throw new Error(error.error?.message || "API Connection failed");
                     }
 
                     const data = await response.json();
                     const content = JSON.parse(data.choices[0].message.content);
-                    setProblems(content.problems || content);
+                    const list = content.problems || content;
+                    setProblems(Array.isArray(list) ? list : []);
                 } catch (error) {
                     console.error(error);
                     alert("Error: " + error.message);
@@ -88,7 +90,7 @@
                 return (
                     <div className="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow-xl border-t-8 border-indigo-600">
                         <h1 className="text-3xl font-bold text-center text-slate-800 mb-2">Math Classroom</h1>
-                        <p className="text-center text-slate-500 mb-8 font-medium text-sm">Upload PDF (OpenAI Mode)</p>
+                        <p className="text-center text-slate-500 mb-8 font-medium text-sm font-sans">OpenAI Mode</p>
                         
                         <div className="space-y-6">
                             <div>
@@ -107,7 +109,7 @@
                                 <div className="border-2 border-dashed border-slate-200 p-8 text-center rounded-2xl">
                                     <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} className="hidden" id="pdf-input" />
                                     <label htmlFor="pdf-input" className="cursor-pointer block">
-                                        <span className="text-blue-600 font-bold block">{file ? file.name : "Tap to select PDF"}</span>
+                                        <span className="text-indigo-600 font-bold block">{file ? file.name : "Tap to select PDF"}</span>
                                     </label>
                                 </div>
                             </div>
@@ -115,12 +117,12 @@
                             <button 
                                 onClick={processPDF}
                                 disabled={loading}
-                                className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 disabled:bg-slate-300"
+                                className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl active:scale-95 disabled:bg-slate-300"
                             >
-                                {loading ? "AI is Reading PDF..." : "CREATE LESSON"}
+                                {loading ? "Reading PDF..." : "CREATE LESSON"}
                             </button>
 
-                            {problems && (
+                            {problems && problems.length > 0 && (
                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-6 border-t border-slate-100">
                                     <button onClick={() => setView('primary')} className="p-5 bg-orange-500 text-white rounded-2xl font-black shadow-lg">KIDS (4-11)</button>
                                     <button onClick={() => setView('secondary')} className="p-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">ESO (11+)</button>
