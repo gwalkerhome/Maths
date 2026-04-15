@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Primary Math</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .column-addition { display: inline-flex; flex-direction: column; align-items: flex-end; font-size: 4rem; font-family: monospace; line-height: 1; }
+        .border-line { border-bottom: 6px solid black; width: 110%; margin-top: 10px; }
+    </style>
+</head>
+<body class="bg-orange-50">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        function PrimaryApp() {
+            const problems = JSON.parse(localStorage.getItem('current_problems') || "[]");
+            const [index, setIndex] = useState(0);
+            const [answer, setAnswer] = useState('');
+            const [status, setStatus] = useState(null);
+
+            if (problems.length === 0) return <div className="p-10 text-center">No problems found. Go back!</div>;
+            const current = problems[index];
+
+            const check = () => {
+                if (answer === current.answer.toString()) {
+                    setStatus('win');
+                    setTimeout(() => {
+                        if (index < problems.length - 1) { setIndex(index + 1); setAnswer(''); setStatus(null); }
+                        else { alert("Finished!"); window.location.href = 'index.html'; }
+                    }, 1000);
+                } else {
+                    setStatus('fail');
+                    setTimeout(() => setStatus(null), 800);
+                }
+            };
+
+            return (
+                <div className="h-screen flex flex-col items-center justify-between p-6">
+                    <div className="column-addition mt-20">
+                        <span>{current.top}</span>
+                        <span>+ {current.bottom}</span>
+                        <div className="border-line"></div>
+                        <div className={`h-20 flex items-center text-blue-600 ${status === 'win' ? 'text-green-500' : ''}`}>{answer || '?'}</div>
+                    </div>
+                    {status === 'win' && <div className="text-4xl font-black text-green-500 animate-bounce">GREAT!</div>}
+                    <div className="grid grid-cols-3 gap-3 w-full max-w-sm mb-10">
+                        {[1,2,3,4,5,6,7,8,9,"C",0,"OK"].map(b => (
+                            <button key={b} onClick={() => {
+                                if (b === "C") setAnswer('');
+                                else if (b === "OK") check();
+                                else setAnswer(prev => prev + b);
+                            }} className="h-20 bg-white rounded-2xl shadow-xl font-bold text-3xl active:bg-orange-200">{b}</button>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PrimaryApp />);
+    </script>
+</body>
+</html>
