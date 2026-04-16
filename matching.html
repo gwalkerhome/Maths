@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aula: Emparejar</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .connection-line { stroke: #6366f1; stroke-width: 4; stroke-linecap: round; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-indigo-50 select-none overflow-hidden">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function MatchingApp() {
+            const problems = JSON.parse(localStorage.getItem('current_problems') || "[]");
+            const title = localStorage.getItem('math_title') || "Empareja los conceptos";
+            
+            const [leftSide, setLeftSide] = useState([]);
+            const [rightSide, setRightSide] = useState([]);
+            const [selectedLeft, setSelectedLeft] = useState(null);
+            const [matches, setMatches] = useState([]); // Store original indices
+            const [status, setStatus] = useState(null);
+
+            useEffect(() => {
+                // Setup columns
+                const left = problems.map((p, i) => ({ text: p.question, id: i }));
+                const right = problems.map((p, i) => ({ text: p.answer, id: i }))
+                                     .sort(() => Math.random() - 0.5); // Shuffle right
+                setLeftSide(left);
+                setRightSide(right);
+            }, []);
+
+            const handleMatch = (rightId) => {
+                if (selectedLeft === null) return;
+                
+                if (selectedLeft === rightId) {
+                    setMatches([...matches, rightId]);
+                    setSelectedLeft(null);
+                    if (matches.length + 1 === leftSide.length) {
+                        setStatus('win');
+                        setTimeout(() => window.location.href = 'index.html', 2000);
+                    }
+                } else {
+                    setStatus('error');
+                    setSelectedLeft(null);
+                    setTimeout(() => setStatus(null), 800);
+                }
+            };
+
+            return (
+                <div className="h-screen flex flex-col items-center p-6">
+                    <header className="w-full flex justify-between items-center mb-8">
+                        <button onClick={() => window.location.href='index.html'} className="text-3xl">✕</button>
+                        <h1 className="text-2xl font-black text-indigo-900 uppercase">{title}</h1>
+                        <div className="w-8"></div>
+                    </header>
+
+                    <div className="flex-1 w-full max-w-4xl grid grid-cols-2 gap-12 items-center">
+                        {/* Left Column */}
+                        <div className="space-y-4">
+                            {leftSide.map((item) => (
+                                <button 
+                                    key={item.id}
+                                    disabled={matches.includes(item.id)}
+                                    onClick={() => setSelectedLeft(item.id)}
+                                    className={`w-full p-8 rounded-3xl border-4 text-xl font-bold transition-all shadow-sm
+                                        ${matches.includes(item.id) ? 'bg-green-100 border-green-500 text-green-700 opacity-50' : 
+                                          selectedLeft === item.id ? 'bg-indigo-600 border-indigo-400 text-white scale-105 shadow-xl' : 'bg-white border-white text-slate-700'}`}
+                                >
+                                    {item.text}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="space-y-4">
+                            {rightSide.map((item, idx) => (
+                                <button 
+                                    key={idx}
+                                    disabled={matches.includes(item.id)}
+                                    onClick={() => handleMatch(item.id)}
+                                    className={`w-full p-8 rounded-3xl border-4 text-xl font-bold transition-all shadow-sm
+                                        ${matches.includes(item.id) ? 'bg-green-100 border-green-500 text-green-700 opacity-50' : 
+                                          'bg-white border-white text-slate-700 active:bg-indigo-100'}`}
+                                >
+                                    {item.text}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-20 flex items-center">
+                        {status === 'win' && <div className="text-4xl font-black text-green-500 animate-bounce">¡EXCELENTE TRABAJO! 🌟</div>}
+                        {status === 'error' && <div className="text-2xl font-black text-red-500 animate-shake">¡Ups! Prueba otra vez</div>}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MatchingApp />);
+    </script>
+</body>
+</html>
