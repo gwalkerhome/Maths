@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aula: Sumas y Restas</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .math-grid { display: grid; grid-template-columns: repeat(3, 4rem); gap: 1rem; justify-items: center; align-items: center; font-family: monospace; }
+        .box { width: 3.8rem; height: 4.8rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 900; background: white; border: 3px solid #e2e8f0; }
+        .box-active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 4px #dbeafe; }
+        .carry-input { width: 2.5rem; height: 2.5rem; border: 2px dashed #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="bg-orange-50 select-none overflow-hidden">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        function ColumnApp() {
+            const problems = JSON.parse(localStorage.getItem('current_problems') || "[]");
+            const [index, setIndex] = useState(0);
+            const [digits, setDigits] = useState(['', '', '']);
+            const [carries, setCarries] = useState(['', '']);
+            const [focus, setFocus] = useState({ type: 'ans', pos: 2 });
+            const [status, setStatus] = useState(null);
+
+            if (problems.length === 0) return <div>No hay problemas.</div>;
+            const current = problems[index];
+
+            const check = () => {
+                const userAns = parseInt(digits.join(''), 10);
+                if (userAns === parseInt(current.answer, 10)) {
+                    setStatus('win');
+                    setTimeout(() => {
+                        if (index < problems.length - 1) {
+                            setIndex(index + 1); setDigits(['','','']); setCarries(['','']); setFocus({type:'ans', pos:2}); setStatus(null);
+                        } else { window.location.href = 'index.html'; }
+                    }, 1000);
+                } else {
+                    setStatus('fail'); setTimeout(() => setStatus(null), 1000);
+                }
+            };
+
+            return (
+                <div className="h-screen flex flex-col items-center justify-between p-4">
+                    <div className="w-full flex justify-between p-2 font-bold text-orange-800">
+                        <button onClick={() => window.location.href='index.html'}>✕ Volver</button>
+                        <span>Problema {index + 1} / {problems.length}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <div className="math-grid mb-4">
+                            {[0,1].map(i => <div key={i} onClick={()=>setFocus({type:'cry', pos:i})} className={`carry-input ${focus.type==='cry'&&focus.pos===i?'border-blue-500 bg-blue-50':''}`}>{carries[i]}</div>)}
+                            <div></div>
+                        </div>
+                        <div className="math-grid text-5xl font-bold">
+                            {current.top.padStart(3, ' ').split('').map((n, i) => <span key={i}>{n}</span>)}
+                            <span className="text-orange-400">+</span>
+                            {current.bottom.padStart(2, ' ').split('').map((n, i) => <span key={i}>{n}</span>)}
+                        </div>
+                        <div className="w-64 h-1 bg-slate-800 my-6"></div>
+                        <div className="math-grid">
+                            {[0,1,2].map(i => <div key={i} onClick={()=>setFocus({type:'ans', pos:i})} className={`box ${focus.type==='ans'&&focus.pos===i?'box-active':''} ${status==='win'?'text-green-500':'text-blue-600'}`}>{digits[i]}</div>)}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 w-full max-w-sm pb-10">
+                        {[1,2,3,4,5,6,7,8,9,"C",0,"OK"].map(b => (
+                            <button key={b} onClick={() => {
+                                if (b === "OK") check();
+                                else if (b === "C") { let d=[...digits]; d[focus.pos]=''; setDigits(d); }
+                                else { 
+                                    if(focus.type==='ans'){ let d=[...digits]; d[focus.pos]=b; setDigits(d); if(focus.pos>0) setFocus({type:'ans', pos:focus.pos-1}); }
+                                    else { let c=[...carries]; c[focus.pos]=b; setCarries(c); }
+                                }
+                            }} className={`h-16 rounded-xl font-bold text-2xl shadow ${b==='OK'?'bg-orange-600 text-white':'bg-white'}`}>{b}</button>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ColumnApp />);
+    </script>
+</body>
+</html>
