@@ -3,44 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Primaria - Columnas Reales</title>
+    <title>Math Classroom - Primary</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .math-container {
-            display: grid;
-            grid-template-columns: repeat(3, 4rem);
-            gap: 0.5rem;
-            justify-items: center;
-            align-items: center;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        .digit-text { font-size: 3.5rem; font-weight: 800; color: #1e293b; line-height: 1; }
-        .box {
-            width: 3.8rem;
-            height: 4.8rem;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.8rem;
-            font-weight: 900;
-            background: white;
-            border: 3px solid #e2e8f0;
-        }
-        .box-active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 4px #dbeafe; }
-        .carry-input {
-            width: 2.8rem;
-            height: 2.8rem;
-            border: 2px dashed #cbd5e1;
-            border-radius: 0.5rem;
-            font-size: 1.4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .math-grid { display: grid; grid-template-columns: repeat(3, 4rem); gap: 1rem; justify-items: center; align-items: center; font-family: monospace; }
+        .box { width: 3.8rem; height: 4.8rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 900; background: white; border: 3px solid #e2e8f0; }
+        .box-active { border-color: #3b82f6; background: #eff6ff; }
     </style>
 </head>
 <body class="bg-orange-50 select-none overflow-hidden">
@@ -50,55 +21,33 @@
 
         function PrimaryApp() {
             const problems = JSON.parse(localStorage.getItem('current_problems') || "[]");
+            const type = localStorage.getItem('math_type'); // 'column_math', 'clock', etc.
+            const title = localStorage.getItem('math_title');
+            
             const [index, setIndex] = useState(0);
             const [status, setStatus] = useState(null);
-            const [digits, setDigits] = useState(['', '', '']); // [H, T, U]
-            const [carries, setCarries] = useState(['', '']); 
-            const [focus, setFocus] = useState({ type: 'ans', pos: 2 }); 
+            const [digits, setDigits] = useState(['', '', '']); // For columns
+            const [textAns, setTextAns] = useState(''); // For clocks/general
+            const [focus, setFocus] = useState(2); 
 
-            if (problems.length === 0) return <div className="p-10 text-center text-xl">Error: No problems loaded.</div>;
-            
+            if (problems.length === 0) return <div className="p-10 text-center">No hay datos.</div>;
             const current = problems[index];
-            // Normalize numbers to 3 digits for the grid
-            const topArr = current.top.toString().padStart(3, ' ').split('');
-            const botArr = current.bottom.toString().padStart(3, ' ').split('');
 
-            const handlePress = (val) => {
-                if (status === 'win') return;
+            const handleCheck = () => {
+                const userVal = type === 'column_math' ? parseInt(digits.join('')) : textAns.toLowerCase().trim();
+                const correctVal = type === 'column_math' ? parseInt(current.answer) : current.answer.toLowerCase().trim();
 
-                if (val === 'C') {
-                    if (focus.type === 'ans') {
-                        let d = [...digits]; d[focus.pos] = ''; setDigits(d);
-                    } else {
-                        let c = [...carries]; c[focus.pos] = ''; setCarries(c);
-                    }
-                    return;
-                }
-
-                if (focus.type === 'ans') {
-                    let d = [...digits]; d[focus.pos] = val; setDigits(d);
-                    if (focus.pos > 0) setFocus({ type: 'ans', pos: focus.pos - 1 });
-                } else {
-                    let c = [...carries]; c[focus.pos] = val; setCarries(c);
-                }
-            };
-
-            const check = () => {
-                // Remove spaces and leading zeros for a clean math comparison
-                const userNum = parseInt(digits.join(''));
-                const correctNum = parseInt(current.answer);
-
-                if (userNum === correctNum) {
+                if (userVal == correctVal) {
                     setStatus('win');
                     setTimeout(() => {
                         if (index < problems.length - 1) {
                             setIndex(index + 1);
                             setDigits(['', '', '']);
-                            setCarries(['', '']);
-                            setFocus({ type: 'ans', pos: 2 });
+                            setTextAns('');
+                            setFocus(2);
                             setStatus(null);
                         } else {
-                            alert("¡Terminado!"); window.location.href = 'index.html';
+                            alert("¡Ficha terminada!"); window.location.href = 'index.html';
                         }
                     }, 1000);
                 } else {
@@ -111,60 +60,59 @@
                 <div className="h-screen flex flex-col items-center justify-between p-4">
                     <div className="w-full flex justify-between p-2 font-bold text-orange-800">
                         <button onClick={() => window.location.href='index.html'}>✕ Volver</button>
-                        <span>Problema {index + 1} / {problems.length}</span>
+                        <span className="text-center">{title} <br/> <small>{index + 1}/{problems.length}</small></span>
+                        <div className="w-8"></div>
                     </div>
 
-                    <div className="flex flex-col items-center">
-                        {/* Carry Row */}
-                        <div className="math-container mb-4">
-                            <div onClick={()=>setFocus({type:'cry', pos:0})} className={`carry-input ${focus.type==='cry'&&focus.pos===0?'border-blue-500 bg-blue-50':''}`}>{carries[0]}</div>
-                            <div onClick={()=>setFocus({type:'cry', pos:1})} className={`carry-input ${focus.type==='cry'&&focus.pos===1?'border-blue-500 bg-blue-50':''}`}>{carries[1]}</div>
-                            <div className="w-10"></div>
-                        </div>
-
-                        {/* Numbers Row 1 */}
-                        <div className="math-container digit-text">
-                            {topArr.map((n, i) => <span key={'t'+i}>{n}</span>)}
-                        </div>
-
-                        {/* Numbers Row 2 (with Plus sign) */}
-                        <div className="math-container digit-text relative">
-                            <span className="absolute -left-12 text-orange-500 font-light">+</span>
-                            {botArr.map((n, i) => <span key={'b'+i}>{n}</span>)}
-                        </div>
-
-                        {/* Sum Line */}
-                        <div className="w-64 h-1.5 bg-slate-800 my-4 rounded-full"></div>
-
-                        {/* Answer Boxes */}
-                        <div className="math-container">
-                            {[0, 1, 2].map(i => (
-                                <div 
-                                    key={'ans'+i}
-                                    onClick={() => setFocus({type:'ans', pos: i})}
-                                    className={`box ${focus.type==='ans' && focus.pos === i ? 'box-active' : ''} ${status==='win' ? 'text-green-500' : 'text-blue-600'}`}
-                                >
-                                    {digits[i]}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full">
+                        {type === 'column_math' ? (
+                            <div className="flex flex-col items-center">
+                                <div className="math-grid text-5xl font-bold mb-2">
+                                    <span></span><span>{current.top?.slice(0,-2)}</span><span>{current.top?.slice(-2)}</span>
+                                    <span className="text-orange-500">+</span><span>{current.bottom?.slice(0,-1)}</span><span>{current.bottom?.slice(-1)}</span>
                                 </div>
-                            ))}
+                                <div className="w-64 h-1.5 bg-black my-4 rounded-full"></div>
+                                <div className="math-grid">
+                                    {[0,1,2].map(i => (
+                                        <div key={i} onClick={()=>setFocus(i)} className={`box ${focus===i?'box-active':''} ${status==='win'?'text-green-500':'text-blue-600'}`}>{digits[i]}</div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-lg text-center">
+                                <p className="text-2xl font-bold mb-6 text-slate-700">{current.question}</p>
+                                <input 
+                                    className="w-full p-4 border-b-4 border-blue-200 text-3xl text-center outline-none focus:border-blue-500 transition-all"
+                                    value={textAns}
+                                    onChange={(e) => setTextAns(e.target.value)}
+                                    placeholder="Escribe aquí..."
+                                />
+                            </div>
+                        )}
+                        
+                        <div className="h-12 mt-4">
+                            {status === 'win' && <div className="text-2xl font-black text-green-500 animate-bounce">¡GENIAL! 🌟</div>}
+                            {status === 'fail' && <div className="text-2xl font-black text-red-500">Revisa...</div>}
                         </div>
                     </div>
 
-                    <div className="h-10">
-                        {status === 'win' && <div className="text-2xl font-black text-green-500">🌟 ¡EXCELENTE!</div>}
-                        {status === 'fail' && <div className="text-2xl font-black text-red-500 tracking-tight">Revisa el resultado...</div>}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 w-full max-w-sm pb-8">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "OK"].map(b => (
-                            <button
-                                key={b}
-                                onClick={() => b === "OK" ? check() : handlePress(b)}
-                                className={`h-16 rounded-2xl font-black text-3xl shadow-lg active:scale-90 transition-all ${b === "OK" ? "bg-orange-600 text-white" : "bg-white text-slate-700"}`}
-                            >
-                                {b}
+                    {/* Number Pad for Columns / OK Button for General */}
+                    <div className="w-full max-w-sm pb-8">
+                        {type === 'column_math' ? (
+                            <div className="grid grid-cols-3 gap-2">
+                                {[1,2,3,4,5,6,7,8,9,"C",0,"OK"].map(b => (
+                                    <button key={b} onClick={() => {
+                                        if(b==="OK") handleCheck();
+                                        else if(b==="C") { let d=[...digits]; d[focus]=''; setDigits(d); }
+                                        else { let d=[...digits]; d[focus]=b; setDigits(d); if(focus>0) setFocus(focus-1); }
+                                    }} className="h-16 bg-white rounded-2xl font-black text-2xl shadow active:scale-90">{b}</button>
+                                ))}
+                            </div>
+                        ) : (
+                            <button onClick={handleCheck} className="w-full py-6 bg-blue-600 text-white rounded-2xl font-black text-2xl shadow-xl active:scale-95">
+                                COMPROBAR RESPUESTA
                             </button>
-                        ))}
+                        )}
                     </div>
                 </div>
             );
